@@ -14,7 +14,7 @@
     --yellow-lt: #FEF9E7;
     --red:       #C0392B;
     --red-lt:    #FADBD8;
-    --blue:      #1A5632;
+    --blue:      #1D8348;
     --blue-lt:   #D5F5E3;
     --gray:      #717D7E;
     --gray-lt:   #F4F6F7;
@@ -28,7 +28,7 @@
 
   body {
     font-family: 'Inter', sans-serif;
-    background: #EAF4FB;
+    background: #EAF7EE;
     color: var(--dark);
     min-height: 100vh;
     padding: 0 0 60px;
@@ -88,7 +88,7 @@
   }
   .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--blue), #2E86C1);
+    background: linear-gradient(90deg, var(--blue), #27AE60);
     border-radius: 99px;
     transition: width 0.4s ease;
     width: 0%;
@@ -197,7 +197,7 @@
     line-height: 1.4;
   }
   .option label:hover {
-    border-color: #2E86C1;
+    border-color: #27AE60;
     background: var(--blue-lt);
   }
   .option input[type="radio"]:checked + label {
@@ -247,7 +247,7 @@
     transition: background 0.2s, transform 0.1s;
     box-shadow: 0 4px 16px rgba(27,79,114,0.3);
   }
-  button[type="submit"]:hover { background: #154360; transform: translateY(-1px); }
+  button[type="submit"]:hover { background: #145A32; transform: translateY(-1px); }
   button[type="submit"]:active { transform: translateY(0); }
   button[type="submit"]:disabled {
     background: #aaa;
@@ -382,7 +382,7 @@
 <body>
 
 <header>
-  <div class="eyebrow">Feria de Ciencias 2026 · C.E.N.M.A. ASIMRA Anexo J W Abalos· 2do B</div>
+  <div class="eyebrow">Feria de Ciencias 2026 · C.E.N.M.A. ASIMRA · Grupo B</div>
   <h1>¿Cuál es tu huella de carbono?</h1>
   <p>Respondé 8 preguntas y descubrí el impacto de tu vida cotidiana en el planeta.</p>
 </header>
@@ -439,7 +439,7 @@
     <div class="bar-chart">
       <div class="bar-row">
         <div class="bar-label">🟢 Baja</div>
-        <div class="bar-track"><div class="bar-fill" id="bar-baja" style="background:#1D8348;width:0%"></div></div>
+        <div class="bar-track"><div class="bar-fill" id="bar-baja" style="background: #1D8348;width:0%"></div></div>
         <div class="bar-count" id="cnt-baja">0</div>
       </div>
       <div class="bar-row">
@@ -459,7 +459,7 @@
 </div>
 
 <footer>
-  <p>C.E.N.M.A. ASIMRA — Anexo Jorge W. Abalos · Feria de Ciencias 2026 · 2.° Año B</p>
+  <p>C.E.N.M.A. ASIMRA — Anexo Jorge W. Abalos · Feria de Ciencias 2026 · 2.° Año</p>
 </footer>
 
 <script>
@@ -522,7 +522,7 @@ const RESULTADOS = {
     badge: "🟡 Huella MEDIA",
     badgeStyle: "background:#FEF9E7;color:#B7950B;",
     message: "Vas por buen camino, ¡pero todavía se puede mejorar! 💪♻️ Algunos cambios simples en tu rutina pueden marcar una gran diferencia para el planeta.",
-    tip: "💡 Intentá reducir el consumo de carne o usar más el transporte público.",
+    tip: "💡 Intentá reducir el consumo de carne una vez por semana o usar más el transporte público.",
     scoreColor: "#B7950B",
     circleBg: "#FEF9E7",
     circleBorder: "#B7950B"
@@ -540,26 +540,34 @@ const RESULTADOS = {
 };
 
 // ── Storage (resultados acumulados) ──────────────────────────────
-const STORAGE_KEY = "huella_resultados_2026";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwoBphV8PhdGhAZp1D5It7cc_uGF3Sw2qbX62udjuv9ZhThGoRD1J0TqtKMm6rlgxdc/exec";
 
-function cargarResultados() {
+async function cargarResultados() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : { baja: 0, media: 0, alta: 0 };
+    const res = await fetch(APPS_SCRIPT_URL);
+    const data = await res.json();
+    return { baja: data.baja || 0, media: data.media || 0, alta: data.alta || 0 };
   } catch(e) {
     return { baja: 0, media: 0, alta: 0 };
   }
 }
 
-function guardarResultado(cat) {
-  const data = cargarResultados();
-  data[cat]++;
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch(e) {}
-  return data;
+async function guardarResultado(cat) {
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: "cat=" + cat
+    });
+    const data = await res.json();
+    return { baja: data.baja || 0, media: data.media || 0, alta: data.alta || 0 };
+  } catch(e) {
+    return await cargarResultados();
+  }
 }
 
-function actualizarGrafico() {
-  const data = cargarResultados();
+async function actualizarGrafico() {
+  const data = await cargarResultados();
   const total = data.baja + data.media + data.alta;
   document.getElementById("total-enc").textContent = total;
   document.getElementById("cnt-baja").textContent  = data.baja;
@@ -677,15 +685,15 @@ function onAnswer() {
 }
 
 // ── Submit ────────────────────────────────────────────────────────
-document.getElementById("encuesta").addEventListener("submit", function(e) {
+document.getElementById("encuesta").addEventListener("submit", async function(e) {
   e.preventDefault();
   const { total } = getScore();
   const cat = getCategoria(total);
   const r = RESULTADOS[cat];
 
   // Guardar y actualizar gráfico
-  guardarResultado(cat);
-  actualizarGrafico();
+  await guardarResultado(cat);
+  await actualizarGrafico();
 
   // Mostrar resultado
   document.getElementById("res-emoji").textContent   = r.emoji;
@@ -723,7 +731,7 @@ function reiniciar() {
 
 // ── Init ──────────────────────────────────────────────────────────
 renderPreguntas();
-actualizarGrafico();
+actualizarGrafico().catch(e => console.error(e));
 </script>
 </body>
 </html>
